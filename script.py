@@ -1,27 +1,49 @@
 import requests
+import mysql.connector
 
+# connection to mysql
+
+conn = mysql.connector.connect(
+    host='localhost',
+    user='root',
+    password='Edgerunner77',
+    database='books'
+)
+
+cursor = conn.cursor()
 key = "AIzaSyCnZ0XLCHO5J6q7aq7YoxH4w4_F_KBxBO8"
-url = "https://www.googleapis.com/books/v1/volumes"
 
-book_title = input("Enter the book title: ")
 
-book_title_universal = book_title.lower()
+def get_and_store(key):
+    url = "https://www.googleapis.com/books/v1/volumes"
+    params = {"q": "a", "key": key}
 
-params = {"q": book_title_universal, "key": key}
 
-response = requests.get(url, params=params)
+    response = requests.get(url, params=params)
 
-if response.status_code == 200:
-    data = response.json()
-    
-    if 'items' in data:
-        first_book = data['items'][0]['volumeInfo']
-        print('First Title Found:')
-        print(f"- Title: {first_book.get('title', 'N/A')}")
-        print(f"- Author(s): {first_book.get('authors', 'N/A')}")
-        print(f"- Published Date: {first_book.get('publishedDate', 'N/A')}")
-        print(f"- Description: {first_book.get('description', 'N/A')}")
+    if response.status_code == 200:
+        data = response.json()
+        
+# ...
 
-else:
-    print("Error:", response.status_code)
+        if 'items' in data:
+            for book in data['items']:
+                title = book.get('volumeInfo', {}).get('title', 'Unknown Title')[:45]
+                authors = book.get('volumeInfo', {}).get('authors', ['Unknown Author'])
+                author = ', '.join(authors)
+                year = book.get('volumeInfo', {}).get('publishedDate', 'Unknown Year')[:4]
+                synopsis = book.get('volumeInfo', {}).get('description', 'No synopsis available')[:495]
 
+                insert_query = "INSERT INTO book_info (title, author, year, synopsis) VALUES (%s, %s, %s, %s)"
+                insert_data = (title, author, year, synopsis)
+                cursor.execute(insert_query, insert_data)
+                conn.commit()
+        print(f"Inserted {len(data['items'])} books into the database.")
+
+    else:
+        print("Error:", response.status_code)
+        print(response.text)
+get_and_store(key)
+
+cursor.close()
+conn.close()
