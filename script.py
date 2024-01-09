@@ -16,7 +16,7 @@ key = "AIzaSyCnZ0XLCHO5J6q7aq7YoxH4w4_F_KBxBO8"
 
 def get_and_store(key):
     url = "https://www.googleapis.com/books/v1/volumes"
-    params = {"q": "a", "key": key}
+    params = {"q": 'Wuthering Heights', "key": key}
 
 
     response = requests.get(url, params=params)
@@ -28,21 +28,27 @@ def get_and_store(key):
 
         if 'items' in data:
             for book in data['items']:
-                title = book.get('volumeInfo', {}).get('title', 'Unknown Title')[:45]
+                title = book.get('volumeInfo', {}).get('title', 'Unknown Title')
                 authors = book.get('volumeInfo', {}).get('authors', ['Unknown Author'])
                 author = ', '.join(authors)
                 year = book.get('volumeInfo', {}).get('publishedDate', 'Unknown Year')[:4]
                 synopsis = book.get('volumeInfo', {}).get('description', 'No synopsis available')[:495]
-
-                insert_query = "INSERT INTO book_info (title, author, year, synopsis) VALUES (%s, %s, %s, %s)"
-                insert_data = (title, author, year, synopsis)
+                category = ', '.join(book.get('volumeInfo', {}).get('categories', 'No genre available'))[:48]
+                is_mature = book.get('volumeInfo', {}).get('maturityRating', 'Unknown maturity rating') == 'MATURE'
+                is_mature_int = 1 if is_mature else 0
+                average_rating = book.get('volumeIndo', {}).get('averageRating', '0.0')
+                average_rating_flt = float(average_rating)
+                insert_query = "INSERT INTO book_info (title, author, year, synopsis, category, is_mature, average_rating) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                insert_data = (title, author, year, synopsis, category, is_mature_int, average_rating_flt)
                 cursor.execute(insert_query, insert_data)
                 conn.commit()
-        print(f"Inserted {len(data['items'])} books into the database.")
 
-    else:
-        print("Error:", response.status_code)
-        print(response.text)
+
+
+
+        else:
+            print("Error:", response.status_code)
+
 get_and_store(key)
 
 cursor.close()
