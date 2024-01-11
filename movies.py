@@ -52,7 +52,7 @@ def get_and_store_random_movies(api_key, num_movies = 20):
 
                 # Writer Info
 
-                writers = [member["name"] for member in crew if member["job"] == "Writer" or member["job"] == "Screenplay" or member["job"] == "Author"]
+                writers = [member["name"] for member in crew if member["job"] == "Writer" or member["job"] == "Screenplay" or member["job"] = "Author"]
                 writers_list = ", ".join(writers) if writers else "Unknown"
 
                 #Top two actors
