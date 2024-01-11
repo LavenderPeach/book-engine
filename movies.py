@@ -52,7 +52,7 @@ def get_and_store_random_movies(api_key, num_movies = 20):
 
                 # Writer Info
 
-                writers = [member["name"] for member in crew if member["job"] == "Writer" or member["job"] == "Screenplay" or member["job"] = "Author"]
+                writers = [member["name"] for member in crew if member["job"] == "Writer" or member["job"] == "Screenplay" or member["job"] == "Author"]
                 writers_list = ", ".join(writers) if writers else "Unknown"
 
                 #Top two actors
@@ -62,12 +62,16 @@ def get_and_store_random_movies(api_key, num_movies = 20):
                 first_actor = actors[0] if actors else "Unknown Actor"
                 second_actor = actors[1] if len(actors) > 1 else "Unknown Actor"
 
+                # Poster URL
+
+                poster_url = f"https://image.tmdb.org/t/p/w500/{movie_data.get('poster_path', 'No poster available')}"
+
                 # Insert movie details into the database
                 insert_query = """
-                INSERT INTO movie (title, overview, released_date, rating, runtime, genre, director, writers, first_actor, second_actor)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO movie (title, overview, released_date, rating, runtime, genre, director, writers, first_actor, second_actor, poster_url)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                insert_data = (title, overview, released_date, rating, runtime, genre, director, writers_list, first_actor, second_actor)
+                insert_data = (title, overview, released_date, rating, runtime, genre, director, writers_list, first_actor, second_actor, poster_url)
                 cursor.execute(insert_query, insert_data)
                 conn.commit()
         else:
