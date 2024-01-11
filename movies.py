@@ -14,66 +14,73 @@ conn = mysql.connector.connect(
 
 cursor = conn.cursor()
 
-def get_and_store_random_movies(api_key, num_movies = 20):
-    for _ in range(num_movies):
+def get_and_store_random_movies(api_key, page = 1):
+        url = f"https://api.themoviedb.org/3/movie/top_rated"
 
-        movie_id = random.randint(1, 1000)
-        url = f"https://api.themoviedb.org/3/movie/{movie_id}"
-        params = {"api_key": api_key}
+        params = {
+            "api_key": api_key,
+            "page": page,
+         }
 
         response = requests.get(url, params=params)
 
         if response.status_code == 200:
             movie_data = response.json()
-            # results = movie_data.get("results", [])
+            results = movie_data.get("results", [])
+            for movie in results:
+                try:
+                    # for movie in results:
+                    title = movie.get("title", "Unknown Title")
+                    overview = movie.get("overview", "No overview available")
+                    released_date = movie.get("release_date", "2024-01-01")
+                    rating = movie.get("vote_average", 0.0)
+                    runtime = movie.get("runtime", 0)
 
-            # for movie in results:
-            title = movie_data.get("title", "Unknown Title")
-            overview = movie_data.get("overview", "No overview available")
-            released_date = movie_data.get("release_date", "Unknown Release Date")
-            rating = movie_data.get("vote_average", 0.0)
-            runtime = movie_data.get("runtime", 0)
+                    # Genre Information
+                    genres = movie.get("genres", [])
+                    genre = ", ".join([genre["name"] for genre in genres]) if genres else "Unknown Genre"
 
-            # Genre Information
-            genres = movie_data.get("genres", [])
-            genre = ", ".join([genre["name"] for genre in genres]) if genres else "Unknown Genre"
+                    # Director info
 
-            # Director info
+                    credits_url = f"https://api.themoviedb.org/3/movie/{movie['id']}/credits"
+                    credits_params = {"api_key": api_key}
+                    credits_response = requests.get(credits_url, params = credits_params)
 
-            credits_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits"
-            credits_params = {"api_key": api_key}
-            credits_response = requests.get(credits_url, params = credits_params)
+                    if credits_response.status_code == 200:
+                        credits_data = credits_response.json()
+                        crew = credits_data.get("crew", [])
+                        directors = [member["name"] for member in crew if member["job"] == "Director"]
+                        director = ", ".join(directors) if directors else "Unknown"
 
-            if credits_response.status_code == 200:
-                credits_data = credits_response.json()
-                crew = credits_data.get("crew", [])
-                directors = [member["name"] for member in crew if member["job"] == "Director"]
-                director = ", ".join(directors) if directors else "Unknown"
+                        # Writer Info
 
-                # Writer Info
+                        writers = [member["name"] for member in crew if member["job"] == "Writer" or member["job"] == "Screenplay" or member["job"] == "Author"]
+                        writers_list = ", ".join(writers) if writers else "Unknown"
 
-                writers = [member["name"] for member in crew if member["job"] == "Writer" or member["job"] == "Screenplay" or member["job"] == "Author"]
-                writers_list = ", ".join(writers) if writers else "Unknown"
+                        #Top two actors
 
-                #Top two actors
+                        cast = credits_data.get("cast", [])
+                        actors = [actor["name"] for actor in cast[:2]]
+                        first_actor = actors[0] if actors else "Unknown Actor"
+                        second_actor = actors[1] if len(actors) > 1 else "Unknown Actor"
 
-                cast = credits_data.get("cast", [])
-                actors = [actor["name"] for actor in cast[:2]]
-                first_actor = actors[0] if actors else "Unknown Actor"
-                second_actor = actors[1] if len(actors) > 1 else "Unknown Actor"
+                        # Poster URL
 
-                # Poster URL
+                        poster_url = f"https://image.tmdb.org/t/p/w500/{movie_data.get('poster_path', 'No poster available')}"
 
-                poster_url = f"https://image.tmdb.org/t/p/w500/{movie_data.get('poster_path', 'No poster available')}"
-
-                # Insert movie details into the database
-                insert_query = """
-                INSERT INTO movie (title, overview, released_date, rating, runtime, genre, director, writers, first_actor, second_actor, poster_url)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                insert_data = (title, overview, released_date, rating, runtime, genre, director, writers_list, first_actor, second_actor, poster_url)
-                cursor.execute(insert_query, insert_data)
-                conn.commit()
+                        # Insert movie details into the database
+                        insert_query = """
+                        INSERT INTO movie (title, overview, released_date, rating, runtime, genre, director, writers, first_actor, second_actor, poster_url)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """
+                        insert_data = (title, overview, released_date, rating, runtime, genre, director, writers_list, first_actor, second_actor, poster_url)
+                        cursor.execute(insert_query, insert_data)
+                        conn.commit()
+                except mysql.connector.Error as err:
+                    if "Duplicate entry" in str(err):
+                      print(f"Skipped duplicate title: {title}")
+                    else:
+                      print(f"Error: {err}")
         else:
             print(f"Error: {response.status_code}")
 
