@@ -1,5 +1,6 @@
 import requests
 import mysql.connector
+import random 
 
 api_key = 'f6a2e921cb0f74ee8188d6a0ad58fdab'  
 
@@ -13,20 +14,23 @@ conn = mysql.connector.connect(
 
 cursor = conn.cursor()
 
-def get_and_store_random_movies(api_key, movie_id):
-    url = f"https://api.themoviedb.org/3/movie/top_rated"
-    params = {"api_key": api_key}
+def get_and_store_random_movies(api_key, num_movies = 20):
+    for _ in range(num_movies):
 
-    response = requests.get(url, params=params)
+        movie_id = random.randint(1, 1000)
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}"
+        params = {"api_key": api_key}
 
-    if response.status_code == 200:
-        movie_data = response.json()
-        results = movie_data.get("results", [])
+        response = requests.get(url, params=params)
 
-        for movie in results:
-            title = movie.get("title", "Unknown Title")
-            overview = movie.get("overview", "No overview available")
-            released_date = movie.get("release_date", "Unknown Release Date")
+        if response.status_code == 200:
+            movie_data = response.json()
+            # results = movie_data.get("results", [])
+
+            # for movie in results:
+            title = movie_data.get("title", "Unknown Title")
+            overview = movie_data.get("overview", "No overview available")
+            released_date = movie_data.get("release_date", "Unknown Release Date")
             rating = movie_data.get("vote_average", 0.0)
             runtime = movie_data.get("runtime", 0)
 
@@ -46,7 +50,9 @@ def get_and_store_random_movies(api_key, movie_id):
                 directors = [member["name"] for member in crew if member["job"] == "Director"]
                 director = ", ".join(directors) if directors else "Unknown"
 
-                writers = [member["name"] for member in crew if member["job"] == "Writer"]
+                # Writer Info
+
+                writers = [member["name"] for member in crew if member["job"] == "Writer" or member["job"] == "Screenplay" or member["job"] == "Author"]
                 writers_list = ", ".join(writers) if writers else "Unknown"
 
                 #Top two actors
@@ -56,20 +62,21 @@ def get_and_store_random_movies(api_key, movie_id):
                 first_actor = actors[0] if actors else "Unknown Actor"
                 second_actor = actors[1] if len(actors) > 1 else "Unknown Actor"
 
-            # Insert movie details into the database
-            insert_query = """
-            INSERT INTO movie (title, overview, released_date, rating, runtime, genre, director, writers, first_actor, second_actor)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            insert_data = (title, overview, released_date, rating, runtime, genre, director, writers_list, first_actor, second_actor)
-            cursor.execute(insert_query, insert_data)
-            conn.commit()
-    else:
-        print(f"Error: {response.status_code}")
+                # Insert movie details into the database
+                insert_query = """
+                INSERT INTO movie (title, overview, released_date, rating, runtime, genre, director, writers, first_actor, second_actor)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                insert_data = (title, overview, released_date, rating, runtime, genre, director, writers_list, first_actor, second_actor)
+                cursor.execute(insert_query, insert_data)
+                conn.commit()
+        else:
+            print(f"Error: {response.status_code}")
 
 # Example: Get and store random movies from page 1
-get_and_store_random_movies(api_key, movie_id=220)
+get_and_store_random_movies(api_key)
 
 # Close the database connection
 cursor.close()
 conn.close()
+
