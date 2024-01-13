@@ -14,8 +14,8 @@ conn = mysql.connector.connect(
 
 cursor = conn.cursor()
 
-def get_and_store_random_movies(api_key, page = 4):
-        url = f"https://api.themoviedb.org/3/movie/popular"
+def get_and_store_random_movies(api_key, page):
+        url = f"https://api.themoviedb.org/3/movie/top_rated"
 
         params = {
             "api_key": api_key,
@@ -40,7 +40,6 @@ def get_and_store_random_movies(api_key, page = 4):
                         title = detailed_movie_data.get("title", "Unknown Title")
                         overview = detailed_movie_data.get("overview", "No overview available")
                         released_date = detailed_movie_data.get("release_date", "2024-01-01")
-                        rating = detailed_movie_data.get("vote_average", 0.0)
                         runtime = detailed_movie_data.get("runtime", 0)
 
                         # Genre Information
@@ -67,9 +66,9 @@ def get_and_store_random_movies(api_key, page = 4):
                             #Top two actors
 
                             cast = credits_data.get("cast", [])
-                            actors = [actor["name"] for actor in cast[:2]]
-                            first_actor = actors[0] if actors else "Unknown Actor"
-                            second_actor = actors[1] if len(actors) > 1 else "Unknown Actor"
+                            actors = [actor["name"] for actor in cast]
+                            actor_list = ", ".join(actors) if actors else "Unknown Actors"
+
 
                             # Poster URL
 
@@ -77,10 +76,10 @@ def get_and_store_random_movies(api_key, page = 4):
 
                             # Insert movie details into the database
                             insert_query = """
-                            INSERT INTO movie (title, overview, released_date, rating, runtime, genre, director, writers, first_actor, second_actor, poster_url)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            INSERT INTO movie (title, plot, release_date, runtime, genre, director, writer, cast, poster_url)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """
-                            insert_data = (title, overview, released_date, rating, runtime, genre, director, writers_list, first_actor, second_actor, poster_url)
+                            insert_data = (title, overview, released_date, runtime, genre, director, writers_list, actor_list, poster_url)
                             cursor.execute(insert_query, insert_data)
                             conn.commit()
                 except mysql.connector.Error as err:
@@ -92,9 +91,9 @@ def get_and_store_random_movies(api_key, page = 4):
             print(f"Error: {response.status_code}")
 
 # Example: Get and store random movies from page 1
-get_and_store_random_movies(api_key)
+for page_number in range(37, 39):
+    get_and_store_random_movies(api_key, page=page_number)
 
 # Close the database connection
 cursor.close()
 conn.close()
-
