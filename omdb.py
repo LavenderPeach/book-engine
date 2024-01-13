@@ -26,6 +26,7 @@ for movie in movies:
         imdb_rating = data.get("imdbRating", "0")
         mpaa_rating = data.get("Rated", "Unknown")
         metascore = data.get("Metascore", "0")
+        rotten_tomatoes = next((rating['Value'] for rating in data.get('Ratings', []) if 'Rotten Tomatoes' in rating.get('Source', '')), "N/A")
         imdb_count = data.get("imdbVotes", 0)
         awards = data.get("Awards", "None")
         poster = data.get("Poster", "No Poster")
